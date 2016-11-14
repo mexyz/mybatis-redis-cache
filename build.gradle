@@ -1,0 +1,17 @@
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile "com.esotericsoftware:reflectasm:1.11.3"
+    compile "com.github.jsqlparser:jsqlparser:0.9.6"
+    compile "org.apache.commons:commons-lang3:3.1"
+    compile "commons-codec:commons-codec:1.10"
+    compile "org.mybatis.spring.boot:mybatis-spring-boot-starter:1.1.1"
+    compile "org.springframework.boot:spring-boot:1.4.0.RELEASE"
+    compile "org.springframework.boot:spring-boot-autoconfigure:1.4.0.RELEASE"
+    compile "com.github.pagehelper:pagehelper:4.1.1"
+    compile "org.redisson:redisson:3.0.1"
+}
