@@ -67,7 +67,7 @@ public class MyBatisCache implements Interceptor {
           String parameterObjectType = parameterObject.getClass().getSimpleName();
 
           if (contains(mappedStatement.getId())) {
-            log.info("读取数据库");
+            log.debug("读取数据库");
             return invocation.proceed();
           }
 
@@ -80,10 +80,10 @@ public class MyBatisCache implements Interceptor {
           obj = invocation.proceed();
           redisService.setObject(key, obj, cacheTime, TimeUnit.MINUTES);
           redisService.setSet(method, key);
-          log.info("读取数据库");
+          log.debug("读取数据库");
           return obj;
         } else {
-          log.info("读取缓存");
+          log.debug("读取缓存");
           return obj;
 
         }
@@ -91,21 +91,21 @@ public class MyBatisCache implements Interceptor {
         if (StringUtils.containsIgnoreCase(sql, "insert")) {
           Set<String> m = MyBatisCacheConfiguration.TABLE_METHOD.get(sql.split("\\s+")[2]);
           for (String mapName : m) {
-            Set<Object> set = redisService.getSet(mapName);
+            Set<String> set = redisService.getSet(mapName);
             redisService.delObjectBatch(set);
             redisService.delSet(mapName);
           }
         } else if (StringUtils.containsIgnoreCase(sql, "delete")) {
           Set<String> m = MyBatisCacheConfiguration.TABLE_METHOD.get(sql.split("\\s+")[2]);
           for (String mapName : m) {
-            Set<Object> set = redisService.getSet(mapName);
+            Set<String> set = redisService.getSet(mapName);
             redisService.delObjectBatch(set);
             redisService.delSet(mapName);
           }
         } else if (StringUtils.containsIgnoreCase(sql, "update")) {
           Set<String> m = MyBatisCacheConfiguration.TABLE_METHOD.get(sql.split("\\s+")[1]);
           for (String mapName : m) {
-            Set<Object> set = redisService.getSet(mapName);
+            Set<String> set = redisService.getSet(mapName);
             redisService.delObjectBatch(set);
             redisService.delSet(mapName);
           }
@@ -136,30 +136,6 @@ public class MyBatisCache implements Interceptor {
     return contains;
   }
 
- 
-
-  private Object getObjFromStr(String serStr) throws UnsupportedEncodingException, IOException, ClassNotFoundException {
-    String redStr = java.net.URLDecoder.decode(serStr, "UTF-8");
-    ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(redStr.getBytes("ISO-8859-1"));
-    ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
-    Object result = objectInputStream.readObject();
-    objectInputStream.close();
-    byteArrayInputStream.close();
-
-    return result;
-  }
-
-  private String getStrFromObj(Object obj) throws IOException, UnsupportedEncodingException {
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
-    objectOutputStream.writeObject(obj);
-    String serStr = byteArrayOutputStream.toString("ISO-8859-1");
-    serStr = java.net.URLEncoder.encode(serStr, "UTF-8");
-
-    objectOutputStream.close();
-    byteArrayOutputStream.close();
-    return serStr;
-  }
 
   public CacheKey createCacheKey(MappedStatement ms, Object parameterObject, RowBounds rowBounds, BoundSql boundSql) {
 

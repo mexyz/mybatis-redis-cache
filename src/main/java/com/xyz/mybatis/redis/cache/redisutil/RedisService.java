@@ -1,10 +1,7 @@
 package com.xyz.mybatis.redis.cache.redisutil;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,6 +11,7 @@ import javax.annotation.PostConstruct;
 
 import org.apache.log4j.Logger;
 import org.redisson.Redisson;
+import org.redisson.api.RBatch;
 import org.redisson.api.RBucket;
 import org.redisson.api.RList;
 import org.redisson.api.RMap;
@@ -22,15 +20,9 @@ import org.redisson.api.RSet;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.ClusterServersConfig;
 import org.redisson.config.Config;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.xyz.mybatis.redis.cache.redisutil.task.RedisBucketTask;
-import com.xyz.mybatis.redis.cache.redisutil.task.RedisListTask;
-import com.xyz.mybatis.redis.cache.redisutil.task.RedisMapTask;
-import com.xyz.mybatis.redis.cache.redisutil.task.RedisSetTask;
-import com.xyz.mybatis.redis.cache.thread.RedisThreadPool;
 
 @Component
 public class RedisService {
@@ -52,8 +44,6 @@ public class RedisService {
   private int connectTimeout;
   @Value("${redis.slaveRetryTimeout:3000}")
   private int slaveRetryTimeout;
-  @Autowired
-  private RedisThreadPool threadPool;
   private RedissonClient redissonClient;
 
   @PostConstruct
@@ -179,7 +169,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RSet<Object> set = redissonClient.getSet(setName);
       if (set != null) {
-        set.add(obj);
+        set.addAsync(obj);
       }
       lock.writeLock().unlock();
     } else {
@@ -201,7 +191,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RSet<Object> set = redissonClient.getSet(setName);
       if (set != null) {
-        set.add(obj);
+        set.addAsync(obj);
         set.expire(timeToLive, timeUnit);
       }
       lock.writeLock().unlock();
@@ -225,7 +215,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RSet<Object> set = redissonClient.getSet(setName);
       if (set != null) {
-        set.remove(obj);
+        set.removeAsync(obj);
       }
       lock.writeLock().unlock();
     } else {
@@ -240,7 +230,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RSet<Object> set = redissonClient.getSet(setName);
       if (set != null) {
-        set.delete();
+        set.deleteAsync();
       }
       lock.writeLock().unlock();
     } else {
@@ -263,7 +253,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RList<Object> list = redissonClient.getList(listName);
       if (list != null && obj != null) {
-        list.add(obj);
+        list.addAsync(obj);
       }
       lock.writeLock().unlock();
     } else {
@@ -286,7 +276,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RList<Object> list = redissonClient.getList(listName);
       if (list != null && obj != null) {
-        list.add(obj);
+        list.addAsync(obj);
         if (timeToLive != null) {
           list.expire(timeToLive, timeUnit);
         }
@@ -312,7 +302,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RList<Object> list = redissonClient.getList(listName);
       if (list != null) {
-        list.remove(obj);
+        list.removeAsync(obj);
       }
       lock.writeLock().unlock();
     } else {
@@ -327,7 +317,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RList<Object> list = redissonClient.getList(listName);
       if (list != null) {
-        list.remove(index);
+        list.removeAsync(index);
       }
       lock.writeLock().unlock();
     } else {
@@ -342,7 +332,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RList<Object> list = redissonClient.getList(listName);
       if (list != null) {
-        list.delete();
+        list.deleteAsync();
       }
       lock.writeLock().unlock();
     } else {
@@ -357,7 +347,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RBucket<Object> bucket = redissonClient.getBucket(key);
       if (bucket != null) {
-        bucket.set(obj);
+        bucket.setAsync(obj);
       }
       lock.writeLock().unlock();
     } else {
@@ -372,7 +362,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RBucket<Object> bucket = redissonClient.getBucket(key);
       if (bucket != null) {
-        bucket.set(obj);
+        bucket.setAsync(obj);
         if (timeToLive != null) {
           bucket.expire(timeToLive, timeUnit);
         }
@@ -390,7 +380,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RBucket<Object> bucket = redissonClient.getBucket(key);
       if (bucket != null) {
-        bucket.set(obj);
+        bucket.setAsync(obj);
         bucket.expireAt(date);
       }
       lock.writeLock().unlock();
@@ -406,7 +396,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RBucket<Object> bucket = redissonClient.getBucket(key);
       if (bucket != null) {
-        bucket.delete();
+        bucket.deleteAsync();
       }
       lock.writeLock().unlock();
     } else {
@@ -420,7 +410,7 @@ public class RedisService {
       RReadWriteLock lock = redissonClient.getReadWriteLock("Lock" + mapName);
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RMap<Object, Object> map = redissonClient.getMap(mapName);
-      map.fastPut(key, obj);
+      map.fastPutAsync(key, obj);
       map.expire(timeToLive, timeUnit);
       lock.writeLock().unlock();
     } else {
@@ -444,7 +434,7 @@ public class RedisService {
       RReadWriteLock lock = redissonClient.getReadWriteLock("Lock" + mapName);
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RMap<Object, Object> map = redissonClient.getMap(mapName);
-      map.fastPut(key, obj);
+      map.fastPutAsync(key, obj);
       lock.writeLock().unlock();
     } else {
       throw new RuntimeException("mapName,key,obj不可为null");
@@ -466,7 +456,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RMap<Object, Object> map = redissonClient.getMap(mapName);
       if (map != null) {
-        map.fastRemove(key);
+        map.fastRemoveAsync(key);
       }
       lock.writeLock().unlock();
     } else {
@@ -481,7 +471,7 @@ public class RedisService {
       lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
       RMap<Object, Object> map = redissonClient.getMap(mapName);
       if (map != null) {
-        map.delete();
+        map.deleteAsync();
       }
       lock.writeLock().unlock();
     } else {
@@ -502,7 +492,7 @@ public class RedisService {
     lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
     RBucket<Object> bucket = redissonClient.getBucket(bucketName);
     if (bucket != null) {
-      bucket.delete();
+      bucket.deleteAsync();
     }
     lock.writeLock().unlock();
   }
@@ -532,304 +522,20 @@ public class RedisService {
     lock.writeLock().lock(autoUnLockTime, TimeUnit.MILLISECONDS);
     RBucket<Object> bucket = redissonClient.getBucket(bucketName);
     if (bucket != null) {
-      bucket.set(obj);
+      bucket.setAsync(obj);
       if (timeToLive != null) {
         bucket.expire(timeToLive, timeUnit);
       }
     }
     lock.writeLock().unlock();
   }
-
-  /**
-   * 批量操作
-   */
-
-  /**
-   * @see RedisService.setMap
-   */
-  public void setMapBatch(String mapName, String key, Object obj) {
-    if (mapName != null && key != null && obj != null) {
-      Map<String, Object> map = new HashMap<String, Object>();
-      map.put(key, obj);
-      setMapBatch(redissonClient, mapName, map, null, null, null);
-    } else {
-      throw new RuntimeException("mapName,key,obj不可为null");
+  
+  public void delObjectBatch(Collection<String> collection) {
+    RBatch batch = redissonClient.createBatch();
+    for(String c:collection){
+      batch.getBucket(c).deleteAsync();
     }
-  }
-
-  public void setMapBatch(String mapName, Map<String, Object> map) {
-    if (mapName != null && map != null) {
-      setMapBatch(redissonClient, mapName, map, null, null, null);
-    } else {
-      throw new RuntimeException("mapName,map不可为null");
-    }
-  }
-
-  /**
-   * @see RedisService.setMap
-   */
-  public void setMapBatch(String mapName, String key, Object obj, Long timeToLive, TimeUnit timeUnit) {
-    if (mapName != null && key != null && obj != null) {
-      Map<String, Object> map = new HashMap<String, Object>();
-      map.put(key, obj);
-      setMapBatch(redissonClient, mapName, map, key, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("mapName,key,obj不可为null");
-    }
-  }
-
-  public void setMapBatch(String mapName, Map<String, Object> map, Long timeToLive, TimeUnit timeUnit) {
-    if (mapName != null && map != null) {
-      setMapBatch(redissonClient, mapName, map, null, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("mapName,map不可为null");
-    }
-  }
-
-  /**
-   * @see RedisService.delMap
-   */
-  public void delMapBatch(String mapName, String key) {
-    if (mapName != null && key != null) {
-      setMapBatch(redissonClient, mapName, null, key, null, null);
-    } else {
-      throw new RuntimeException("mapName,key不可为null");
-    }
-  }
-
-  public void delMapBatch(String mapName, Map<String, Object> map) {
-    if (mapName != null && map != null) {
-      setMapBatch(redissonClient, mapName, map, null, null, null);
-    } else {
-      throw new RuntimeException("mapName,map不可为null");
-    }
-  }
-
-  public void delMapBatch(String mapName) {
-    if (mapName != null) {
-      setMapBatch(redissonClient, mapName, null, null, null, null);
-    } else {
-      throw new RuntimeException("mapName不可为null");
-    }
-  }
-
-  /**
-   * @see RedisService.setSet
-   */
-  public void setSetBatch(String setName, Object obj) {
-    if (setName != null && obj != null) {
-      Set<Object> set = new HashSet<Object>();
-      set.add(obj);
-      setSetBatch(setName, set, 1, null, null);
-    } else {
-      throw new RuntimeException("setName,obj不可为null");
-    }
-
-  }
-
-  public void setSetBatch(String setName, Set<Object> set) {
-    if (setName != null && set != null) {
-      setSetBatch(setName, set, 1, null, null);
-    } else {
-      throw new RuntimeException("setName,set不可为null");
-    }
-  }
-
-  /**
-   * @see RedisService.setSet
-   */
-  public void setSetBatch(String setName, Object obj, Long timeToLive, TimeUnit timeUnit) {
-    if (setName != null && obj != null && timeToLive != null && timeUnit != null) {
-      Set<Object> set = new HashSet<Object>();
-      set.add(obj);
-      setSetBatch(setName, set, 1, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("setName,obj,timeToLive,timeUnit不可为null");
-    }
-
-  }
-
-  public void setSetBatch(String setName, Set<Object> set, Long timeToLive, TimeUnit timeUnit) {
-    if (setName != null && set != null && timeToLive != null && timeUnit != null) {
-      setSetBatch(setName, set, 1, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("setName,obj,timeToLive,timeUnit不可为null");
-    }
-  }
-
-  public void delSetBatch(String setName, Object obj) {
-    if (setName != null && obj != null) {
-      Set<Object> set = new HashSet<Object>();
-      set.add(obj);
-      setSetBatch(setName, set, 0, null, null);
-    } else {
-      throw new RuntimeException("setName,obj不可为null");
-    }
-  }
-
-  public void delSetBatch(String setName, Set<Object> set) {
-    if (setName != null && set != null) {
-      setSetBatch(setName, set, -1, null, null);
-    } else {
-      throw new RuntimeException("setName,set不可为null");
-    }
-  }
-
-  public void delSetBatch(String setName) {
-    if (setName != null) {
-      setSetBatch(setName, null, -1, null, null);
-    } else {
-      throw new RuntimeException("setName不可为null");
-    }
-  }
-
-  /**
-   * @see RedisService.setList
-   */
-  public void setListBatch(String listName, Object obj) {
-    if (listName != null && obj != null) {
-      List<Object> list = new ArrayList<Object>();
-      list.add(obj);
-      setListBatch(listName, list, 1, null, null);
-    } else {
-      throw new RuntimeException("listName,obj不可为null");
-    }
-  }
-
-  public void setListBatch(String listName, List<Object> list) {
-    if (listName != null && list != null) {
-      setListBatch(listName, list, 1, null, null);
-    } else {
-      throw new RuntimeException("listName,list不可为null");
-    }
-  }
-
-  public void setListBatch(String listName, Object obj, Long timeToLive, TimeUnit timeUnit) {
-    if (listName != null && obj != null && timeToLive != null && timeUnit != null) {
-      List<Object> list = new ArrayList<Object>();
-      list.add(obj);
-      setListBatch(listName, list, 1, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("listName,obj,timeToLive,timeUnit不可为null");
-    }
-  }
-
-  public void setListBatch(String listName, List<Object> list, Long timeToLive, TimeUnit timeUnit) {
-    if (listName != null && list != null && timeToLive != null && timeUnit != null) {
-      setListBatch(listName, list, 1, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("listName,list,timeToLive,timeUnit不可为null");
-    }
-  }
-
-  public void delListBatch(String listName, Object obj) {
-    if (listName != null && obj != null) {
-      List<Object> list = new ArrayList<Object>();
-      list.add(obj);
-      setListBatch(listName, list, 0, null, null);
-    } else {
-      throw new RuntimeException("listName,obj不可为null");
-    }
-
-  }
-
-  public void delListBatch(String listName, List<Object> list) {
-    if (listName != null && list != null) {
-      setListBatch(listName, list, 0, null, null);
-    } else {
-      throw new RuntimeException("listName,list不可为null");
-    }
-  }
-
-  public void delListBatch(String listName) {
-    if (listName != null) {
-      setListBatch(listName, null, -1, null, null);
-    } else {
-      throw new RuntimeException("listName不可为null");
-    }
-  }
-
-  /**
-   * @see RedisService.setBucket
-   */
-  @Deprecated
-  public void setBucketBatch(String bucketName, Object obj) {
-    List<Object> list = new ArrayList<Object>();
-    list.add(obj);
-    threadPool.threadPoolExecute(new RedisBucketTask(redissonClient, bucketName, list, 1, autoUnLockTime, null, null));
-  }
-
-  /**
-   * @see RedisService.delBucket
-   */
-  @Deprecated
-  public void delBucketBatch(String bucketName, Object obj) {
-    List<Object> list = new ArrayList<Object>();
-    list.add(obj);
-    threadPool.threadPoolExecute(new RedisBucketTask(redissonClient, bucketName, list, 0, autoUnLockTime, null, null));
-  }
-
-  public void delObjectBatch(Collection<Object> collection) {
-    threadPool.threadPoolExecute(new RedisBucketTask(redissonClient, null, collection,-1, autoUnLockTime, null, null));
-  }
-  /**
-   * @see RedisService.setBucket
-   */
-  @Deprecated
-  public void setBucketBatch(String bucketName, Object obj, Long timeToLive, TimeUnit timeUnit) {
-    List<Object> list = new ArrayList<Object>();
-    list.add(obj);
-    threadPool.threadPoolExecute(
-        new RedisBucketTask(redissonClient, bucketName, list, 1, autoUnLockTime, timeToLive, timeUnit));
-  }
-
-  public void setObjectBatch(String bucketName, Object obj) {
-    if (bucketName != null && obj != null) {
-      List<Object> list = new ArrayList<Object>();
-      list.add(obj);
-      setObjectBatch(bucketName, list, 1, null, null);
-    } else {
-      throw new RuntimeException("bucketName,obj,timeToLive,timeUnit不可为null");
-    }
-  }
-
-  public void setObjectBatch(String bucketName, List<Object> list) {
-    if (bucketName != null && list != null) {
-      setObjectBatch(bucketName, list, 1, null, null);
-    } else {
-      throw new RuntimeException("bucketName,list,timeToLive,timeUnit不可为null");
-    }
-  }
-
-  public void setObjectBatch(String bucketName, Object obj, Long timeToLive, TimeUnit timeUnit) {
-    if (bucketName != null && obj != null && timeToLive != null && timeUnit != null) {
-      List<Object> list = new ArrayList<Object>();
-      list.add(obj);
-      setObjectBatch(bucketName, list, 1, timeToLive, timeUnit);
-    } else {
-      throw new RuntimeException("bucketName,obj,timeToLive,timeUnit不可为null");
-    }
-  }
-
-  private void setObjectBatch(String bucketName, List<Object> list, int type, Long timeToLive, TimeUnit timeUnit) {
-    threadPool.threadPoolExecute(
-        new RedisBucketTask(redissonClient, bucketName, list, type, autoUnLockTime, timeToLive, timeUnit));
-  }
-
-  private void setMapBatch(RedissonClient redissonClient, String mapName, Map<String, Object> map, String key,
-      Long timeToLive, TimeUnit timeUnit) {
-    threadPool
-        .threadPoolExecute(new RedisMapTask(redissonClient, mapName, map, key, autoUnLockTime, timeToLive, timeUnit));
-  }
-
-  private void setSetBatch(String setName, Set<Object> setObj, int type, Long timeToLive, TimeUnit timeUnit) {
-    threadPool
-        .threadPoolExecute(new RedisSetTask(redissonClient, setName, null, -1, autoUnLockTime, timeToLive, timeUnit));
-  }
-
-  private void setListBatch(String listName, List<Object> obj, int type, Long timeToLive, TimeUnit timeUnit) {
-    threadPool.threadPoolExecute(
-        new RedisListTask(redissonClient, listName, obj, type, autoUnLockTime, timeToLive, timeUnit));
+    batch.executeSkipResultAsync();
   }
 
   /**
